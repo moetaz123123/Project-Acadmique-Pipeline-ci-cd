@@ -2,14 +2,15 @@ variables:
   IMAGE_NAME: tayeb517/juice-shop
   IMAGE_TAG: juice-shop-1.1
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Cache SonarCloud
-  GIT_DEPTH: "0"  # Shallow clones désactivés pour une meilleure analyse
+  GIT_DEPTH: "0"  # Désactiver les clones superficiels pour une meilleure analyse
 
 stages:
   - cache
   - test
-  - quality  # 🆕 Nouveau stage pour SonarCloud
+  - quality
   - build
 
+# --------- 1) CACHE DES DÉPENDANCES ---------
 create_cache:
   image: node:18-bullseye
   stage: cache
@@ -25,6 +26,7 @@ create_cache:
       - .yarn
     policy: pull-push
 
+# --------- 2) TESTS ---------
 yarn_test:
   image: node:18-bullseye
   stage: test
@@ -42,7 +44,7 @@ yarn_test:
     policy: pull
   artifacts:
     paths:
-      - coverage/  # 🆕 Pour envoyer la couverture de code à SonarCloud
+      - coverage/      # Pour SonarCloud
     expire_in: 1 hour
 
 gitleaks:
@@ -72,22 +74,22 @@ semgrep:
     - semgrep ci
   allow_failure: true
 
-# 🆕 Job SonarCloud
+# --------- 3) SONARCLOUD ---------
 sonarcloud:
   stage: quality
-  image: 
+  image:
     name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [""]
+  script:
+    - sonar-scanner
   cache:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
-  script:
-    - sonar-scanner
   dependencies:
-    - yarn_test  # Récupère les artefacts de couverture
+    - yarn_test    # Récupère la couverture générée
 
-
+# --------- 4) BUILD & PUSH DOCKER ---------
 build_image:
   stage: build
   image: docker:24
