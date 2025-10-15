@@ -61,7 +61,7 @@ njsscan:
   stage: test
   image: python:3.11
   before_script:
-    - pip install "njsscan==0.2.11"
+    - pip install "njsscan==0.4.3"
   script:
     - njsscan --exit-warning .
   allow_failure: true
