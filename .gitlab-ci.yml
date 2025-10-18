@@ -40,13 +40,7 @@ sonarqube_sast:
         -Dsonar.token="$SONAR_TOKEN" 
         -Dsonar.projectKey="azizdaoues19_juice-shop" 
         -Dsonar.organization="azizdaoues19"
-  artifacts:
-    paths:
-      - .scannerwork/
-    expire_in: 7 days
-  only:
-    - branches
-    - merge_requests
+  
 
 npm_audit:
   stage: sast
