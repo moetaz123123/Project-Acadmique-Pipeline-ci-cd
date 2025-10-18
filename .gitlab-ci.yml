@@ -102,28 +102,23 @@ build_image:
       dotenv: build.env
   after_script:
     - echo "BUILT_IMAGE=$IMAGE_NAME:$IMAGE_TAG" > build.env
+# Supprimez tout l'ancien trivy_scan et ajoutez celui-ci à la fin du fichier
 
-trivy_scan:
+trivy_image_scan:
   stage: scan
   image: 
     name: aquasec/trivy:latest
     entrypoint: [""]
-  before_script:
-    - export TRIVY_USERNAME=$DOCKER_USER
-    - export TRIVY_PASSWORD=$DOCKER_PASS
+  variables:
+    TRIVY_USERNAME: $DOCKER_USER
+    TRIVY_PASSWORD: $DOCKER_PASS
   script:
-    - echo "🔍 Scanning image for vulnerabilities..."
     - trivy image --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
     - trivy image --format json --output trivy-report.json $IMAGE_NAME:$IMAGE_TAG
-    - trivy image --format sarif --output trivy-report.sarif $IMAGE_NAME:$IMAGE_TAG
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
   artifacts:
     paths:
       - trivy-report.json
-      - trivy-report.sarif
     expire_in: 30 days
-    reports:
-      container_scanning: trivy-report.json
   dependencies:
     - build_image
   allow_failure: true
