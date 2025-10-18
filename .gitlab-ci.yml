@@ -35,7 +35,7 @@ sonarqube_sast:
       - .sonar/cache
   script:
     - echo "Using SONAR_TOKEN from GitLab CI variables"
-    - sonar-scanner -Dsonar.host.url="$SONAR_HOST_URL" -Dsonar.token="$SONAR_TOKEN" -Dsonar.projectKey="touzabenameur34_devops" -Dsonar.organization="touzabenameur34"
+    - sonar-scanner -Dsonar.host.url="$SONAR_HOST_URL" -Dsonar.token="$SONAR_TOKEN" -Dsonar.projectKey="azizdaoues19_juice-shop" -Dsonar.organization="azizdaoues19"
   artifacts:
     paths:
       - .scannerwork/
