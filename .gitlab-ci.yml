@@ -103,21 +103,23 @@ build_image:
   after_script:
     - echo "BUILT_IMAGE=$IMAGE_NAME:$IMAGE_TAG" > build.env
 
-trivy_image_scan:
+trivy_scan:
   stage: scan
-  image: 
-    name: aquasec/trivy:latest
-    entrypoint: [""]
+  image: docker:24
+  services:
+    - docker:24-dind
   variables:
-    TRIVY_USERNAME: $DOCKER_USER
-    TRIVY_PASSWORD: $DOCKER_PASS
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - apk add curl
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
   script:
-    - trivy image --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
-    - trivy image --format json --output trivy-report.json $IMAGE_NAME:$IMAGE_TAG
+    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+    - trivy image --no-progress --severity HIGH,CRITICAL --output trivy-scanning-report.txt $IMAGE_NAME:$IMAGE_TAG
   artifacts:
-    paths:
-      - trivy-report.json
-    expire_in: 30 days
+    reports:
+      container_scanning: trivy-scanning-report.txt
   dependencies:
     - build_image
   allow_failure: true
