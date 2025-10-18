@@ -8,16 +8,16 @@ stages:
   - sast
   - build
   
-
 create_cache:
   image: node:18-bullseye
   stage: cache
   script:
+    - rm -rf node_modules yarn.lock  # Supprimer l'ancien cache
     - yarn install --ignore-engines
   cache:
     key:
       files:
-        - yarn.lock
+        - package.json
     paths:
       - node_modules/
       - yarn.lock
@@ -33,7 +33,7 @@ yarn_test:
   cache:
     key:
       files:
-        - yarn.lock
+        - package.json
     paths:
       - node_modules/
       - yarn.lock
@@ -89,7 +89,7 @@ npm_audit:
   cache:
     key:
       files:
-        - yarn.lock
+        - package.json
     paths:
       - node_modules/
     policy: pull
@@ -116,4 +116,3 @@ build_image:
       dotenv: build.env
   after_script:
     - echo "BUILT_IMAGE=$IMAGE_NAME:$IMAGE_TAG" > build.env
-
