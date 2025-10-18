@@ -137,12 +137,12 @@ zap_dast:
     - apk add --no-cache curl
   script:
     - echo "Starting Juice Shop application..."
-    - docker run -d --name juice-shop -p 3000:3000 $IMAGE_NAME:$IMAGE_TAG
+    - docker run -d --name juice-shop-zap -p 3000:3000 $IMAGE_NAME:$IMAGE_TAG
     - sleep 30
     - echo "Waiting for application to be ready..."
     - |
       for i in $(seq 1 20); do
-        if docker exec juice-shop curl -sf http://localhost:3000 >/dev/null 2>&1; then
+        if docker exec juice-shop-zap curl -sf http://localhost:3000 >/dev/null 2>&1; then
           echo "Application is ready"
           break
         fi
@@ -150,15 +150,98 @@ zap_dast:
         sleep 3
       done
     - echo "Running OWASP ZAP scan..."
-    - docker run --rm --network container:juice-shop -v $(pwd):/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000 -r zap-report.html -J zap-report.json || true
+    - docker run --rm --network container:juice-shop-zap -v $(pwd):/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000 -r zap-report.html -J zap-report.json || true
   after_script:
-    - docker stop juice-shop || true
-    - docker rm juice-shop || true
+    - docker stop juice-shop-zap || true
+    - docker rm juice-shop-zap || true
   artifacts:
     when: always
     paths:
       - zap-report.html
       - zap-report.json
+    expire_in: 7 days
+  allow_failure: true
+  needs:
+    - build_image
+
+nikto_dast:
+  stage: dast
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Starting Juice Shop application for Nikto scan..."
+    - docker run -d --name juice-shop-nikto -p 3001:3000 $IMAGE_NAME:$IMAGE_TAG
+    - sleep 30
+    - echo "Waiting for application to be ready..."
+    - |
+      for i in $(seq 1 20); do
+        if docker exec juice-shop-nikto curl -sf http://localhost:3000 >/dev/null 2>&1; then
+          echo "Application is ready"
+          break
+        fi
+        echo "Waiting... ($i/20)"
+        sleep 3
+      done
+    - echo "Running Nikto web vulnerability scan..."
+    - docker run --rm --network container:juice-shop-nikto -v $(pwd):/tmp sullo/nikto -h http://localhost:3000 -Format htm -output /tmp/nikto-report.html || true
+    - docker run --rm --network container:juice-shop-nikto -v $(pwd):/tmp sullo/nikto -h http://localhost:3000 -Format json -output /tmp/nikto-report.json || true
+    - echo "Nikto scan completed"
+  after_script:
+    - docker stop juice-shop-nikto || true
+    - docker rm juice-shop-nikto || true
+  artifacts:
+    when: always
+    paths:
+      - nikto-report.html
+      - nikto-report.json
+    expire_in: 7 days
+  allow_failure: true
+  needs:
+    - build_image
+
+arachni_dast:
+  stage: dast
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Starting Juice Shop application for Arachni scan..."
+    - docker run -d --name juice-shop-arachni -p 3002:3000 $IMAGE_NAME:$IMAGE_TAG
+    - sleep 30
+    - echo "Waiting for application to be ready..."
+    - |
+      for i in $(seq 1 20); do
+        if docker exec juice-shop-arachni curl -sf http://localhost:3000 >/dev/null 2>&1; then
+          echo "Application is ready"
+          break
+        fi
+        echo "Waiting... ($i/20)"
+        sleep 3
+      done
+    - echo "Running Arachni web security scanner..."
+    - docker run --rm --network container:juice-shop-arachni -v $(pwd):/arachni arachni/arachni:latest arachni http://localhost:3000 --report-save-path=/arachni/arachni-report.afr --checks=* --scope-include-subdomains || true
+    - docker run --rm -v $(pwd):/arachni arachni/arachni:latest arachni_reporter /arachni/arachni-report.afr --reporter=html:outfile=/arachni/arachni-report.html || true
+    - docker run --rm -v $(pwd):/arachni arachni/arachni:latest arachni_reporter /arachni/arachni-report.afr --reporter=json:outfile=/arachni/arachni-report.json || true
+  after_script:
+    - docker stop juice-shop-arachni || true
+    - docker rm juice-shop-arachni || true
+  artifacts:
+    when: always
+    paths:
+      - arachni-report.html
+      - arachni-report.json
+      - arachni-report.afr
     expire_in: 7 days
   allow_failure: true
   needs:
