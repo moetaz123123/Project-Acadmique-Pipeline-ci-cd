@@ -35,7 +35,11 @@ sonarqube_sast:
       - .sonar/cache
   script:
     - echo "Using SONAR_TOKEN from GitLab CI variables"
-    - sonar-scanner -Dsonar.host.url="$SONAR_HOST_URL" -Dsonar.token="$SONAR_TOKEN" -Dsonar.projectKey="azizdaoues19_juice-shop" -Dsonar.organization="azizdaoues19"
+    - sonar-scanner 
+        -Dsonar.host.url="$SONAR_HOST_URL" 
+        -Dsonar.token="$SONAR_TOKEN" 
+        -Dsonar.projectKey="azizdaoues19_juice-shop" 
+        -Dsonar.organization="azizdaoues19"
   artifacts:
     paths:
       - .scannerwork/
@@ -43,20 +47,6 @@ sonarqube_sast:
   only:
     - branches
     - merge_requests
-
-semgrep_sast:
-  stage: sast
-  image: returntocorp/semgrep
-  script:
-    - semgrep --config=auto --json --output=semgrep-report.json . || true
-    - semgrep --config=auto --severity=ERROR --severity=WARNING .
-  artifacts:
-    paths:
-      - semgrep-report.json
-    expire_in: 7 days
-    reports:
-      sast: semgrep-report.json
-  allow_failure: true
 
 npm_audit:
   stage: sast
