@@ -105,6 +105,29 @@ build_image:
 
 trivy_scan:
   stage: scan
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  before_script:
+    - export TRIVY_USERNAME=$DOCKER_USER
+    - export TRIVY_PASSWORD=$DOCKER_PASS
+  script:
+    - echo "🔍 Scanning image for vulnerabilities..."
+    - trivy image --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
+    - trivy image --format json --output trivy-report.json $IMAGE_NAME:$IMAGE_TAG
+    - trivy image --format sarif --output trivy-report.sarif $IMAGE_NAME:$IMAGE_TAG
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
+  artifacts:
+    paths:
+      - trivy-report.json
+      - trivy-report.sarif
+    expire_in: 30 days
+    reports:
+      container_scanning: trivy-report.json
+  dependencies:
+    - build_image
+  allow_failure: true
+  stage: scan
   image: docker:24
   services:
     - docker:24-dind
