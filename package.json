@@ -54,6 +54,21 @@
     "express": "4.16.0",
     "mongoose": "5.0.0"
   },
+  "devDependencies": {
+    "nyc": "^15.1.0",
+    "typescript": "^4.9.5",
+    "ts-jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "eslint": "^8.0.0",
+    "mocha": "^10.0.0",
+    "source-map-support": "^0.5.21",
+    "concurrently": "^7.0.0",
+    "grunt": "^1.5.0"
+  },
   "scripts": {
     "build:frontend": "cd frontend && node ./node_modules/@angular/cli/bin/ng build --aot --configuration production --output-hashing=none --vendor-chunk=true --source-map=false",
     "build:server": "tsc",
