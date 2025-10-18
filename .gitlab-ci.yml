@@ -103,8 +103,93 @@ build_image:
   after_script:
     - echo "BUILT_IMAGE=$IMAGE_NAME:$IMAGE_TAG" > build.env
 
-trivy_scan:
-  stage: scan
+variables:
+  IMAGE_NAME: tayeb517/juice-shop
+  IMAGE_TAG: juice-shop-1.2
+
+stages:
+  - cache
+  - sast
+  - build
+  - scan  # Nouveau stage pour Trivy
+  
+create_cache:
+  image: node:18-bullseye
+  stage: cache
+  script:
+    - rm -rf node_modules yarn.lock
+    - yarn install --ignore-engines
+  cache:
+    key:
+      files:
+        - package.json
+    paths:
+      - node_modules/
+      - yarn.lock
+      - .yarn
+    policy: pull-push
+
+sonarqube_sast:
+  stage: sast
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  cache:
+    key: "sonar"
+    paths:
+      - .sonar/cache
+  script:
+    - echo "Using SONAR_TOKEN from GitLab CI variables"
+    - sonar-scanner 
+        -Dsonar.host.url="$SONAR_HOST_URL" 
+        -Dsonar.token="$SONAR_TOKEN" 
+        -Dsonar.projectKey="azizdaoues19_juice-shop" 
+        -Dsonar.organization="azizdaoues19"
+  artifacts:
+    paths:
+      - .scannerwork/
+    expire_in: 7 days
+  only:
+    - branches
+    - merge_requests
+
+semgrep_sast:
+  stage: sast
+  image: returntocorp/semgrep
+  script:
+    - semgrep --config=auto --json --output=semgrep-report.json . || true
+    - semgrep --config=auto --severity=ERROR --severity=WARNING .
+  artifacts:
+    paths:
+      - semgrep-report.json
+    expire_in: 7 days
+    reports:
+      sast: semgrep-report.json
+  allow_failure: true
+
+npm_audit:
+  stage: sast
+  image: node:18-bullseye
+  script:
+    - yarn install --ignore-engines
+    - echo "Running npm audit..."
+    - npm audit --json > npm-audit-report.json || true
+    - npm audit --audit-level=moderate || true
+  artifacts:
+    paths:
+      - npm-audit-report.json
+    expire_in: 7 days
+  cache:
+    key:
+      files:
+        - package.json
+    paths:
+      - node_modules/
+    policy: pull
+  allow_failure: true
+
+build_image:
+  stage: build
   image: docker:24
   services:
     - docker:24-dind
@@ -112,14 +197,46 @@ trivy_scan:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
   before_script:
-    - apk add curl
-    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+    - echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
   script:
-    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-    - trivy image --no-progress --severity HIGH,CRITICAL --output trivy-scanning-report.txt $IMAGE_NAME:$IMAGE_TAG
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
   artifacts:
+    expire_in: 1 day
     reports:
-      container_scanning: trivy-scanning-report.txt
+      dotenv: build.env
+  after_script:
+    - echo "BUILT_IMAGE=$IMAGE_NAME:$IMAGE_TAG" > build.env
+
+trivy_image_scan:
+  stage: scan
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  variables:
+    TRIVY_USERNAME: $DOCKER_USER
+    TRIVY_PASSWORD: $DOCKER_PASS
+  script:
+    # Scan avec affichage console
+    - trivy image --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
+    
+    # Rapport JSON
+    - trivy image --format json --output trivy-report.json $IMAGE_NAME:$IMAGE_TAG
+    
+    # Rapport HTML (avec template)
+    - trivy image --format template --template "@contrib/html.tpl" --output trivy-report.html $IMAGE_NAME:$IMAGE_TAG
+    
+    # Rapport SARIF (pour GitLab Security Dashboard)
+    - trivy image --format sarif --output trivy-report.sarif $IMAGE_NAME:$IMAGE_TAG
+    
+  artifacts:
+    paths:
+      - trivy-report.json
+      - trivy-report.html
+      - trivy-report.sarif
+    expire_in: 30 days
+    reports:
+      container_scanning: trivy-report.json
   dependencies:
     - build_image
   allow_failure: true
