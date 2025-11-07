@@ -34,7 +34,7 @@ Ce projet fait partie d'un stage DevSecOps utilisant *OWASP Juice Shop*, une app
 
 ### Installation depuis les sources
 # Cloner le repository
-git clone https://gitlab.com/tayebmallouli640/stage-devsecops-ete.git
+git clone [https://gitlab.com/tayebmallouli640/stage-devsecops-ete.git](https://gitlab.com/tazbenameur/juice-shop.git)
 cd stage-devsecops-ete
 
 # Installer les dépendances
@@ -137,9 +137,9 @@ npm run test:integration
 
 Ce projet est réalisé dans le cadre d'un stage. Pour toute question ou suggestion :
 
-- *Stagiaire* : Tayeb Mallouli
-- *Email* : tayebmallouli640@gmail.com
-- *GitLab* : https://gitlab.com/tayebmallouli640
+- *Stagiaire* : Moetaz Ben Ameur
+- *Email* : moetazbenameur@gmail.com
+- *GitLab* : [https://gitlab.com/touzabenameur34](https://gitlab.com/tazbenameur/juice-shop)
 
 ## Licence
 
